@@ -95,19 +95,33 @@ export default function Page() {
           <div className="card space-y-3">
             <h2 className="text-lg font-semibold">Ingredients</h2>
             <div className="flex flex-wrap gap-2">
-              {data.ingredients?.map((i, idx) => (
-                <React.Fragment key={`${i.display_name}-${idx}`}>
-                  <IngredientChip label={i.display_name} origin={i.origin?.type || 'unknown'} onOpen={() => { setOpenIndex(idx); explain(idx) }} />
-                  <IngredientPopover open={openIndex===idx} title={title(i)} onClose={() => setOpenIndex(null)}>
-                    <div className="space-y-2 text-sm">
-                      <div><span className="font-medium">Role:</span> {i.e_number ? (kbByENumber(i.e_number)?.role || 'Food additive') : 'Ingredient'}</div>
-                      <div><span className="font-medium">Plain English:</span> {explainCache[`${data.product.gtin}-${idx}`] || (kbByENumber(i.e_number||'')?.plain || (i.e_number ? 'EU-identified additive (E-number).' : 'Common food ingredient.'))}</div>
-                      <div><span className="font-medium">Origin:</span> {(i.origin?.type||'unknown').toString().toUpperCase()} {i.origin?.processing ? `• ${i.origin.processing}`:''}</div>
-                      <div className="pt-2 border-t text-xs text-gray-600">Why it's here: {kbByENumber(i.e_number||'')?.role ? `${kbByENumber(i.e_number||'')?.role.toLowerCase()} function` : 'improves taste/texture/stability'}.</div>
-                    </div>
-                  </IngredientPopover>
-                </React.Fragment>
-              ))}
+              {data.ingredients?.map((i, idx) => {
+                const kb = kbByENumber(i.e_number || '');
+                const key = `${data.product.gtin}-${idx}`;
+                const plainText =
+                  explainCache[key] ||
+                  kb?.plain ||
+                  (i.e_number ? 'EU-identified additive (E-number).' : 'Common food ingredient.');
+                const roleLabel = kb?.role ? `${kb.role.toLowerCase()} function` : 'improves taste/texture/stability';
+            
+                return (
+                  <React.Fragment key={`${i.display_name}-${idx}`}>
+                    <IngredientChip
+                      label={i.display_name}
+                      origin={i.origin?.type || 'unknown'}
+                      onOpen={() => { setOpenIndex(idx); explain(idx); }}
+                    />
+                    <IngredientPopover open={openIndex===idx} title={title(i)} onClose={() => setOpenIndex(null)}>
+                      <div className="space-y-2 text-sm">
+                        <div><span className="font-medium">Role:</span> {i.e_number ? (kb?.role || 'Food additive') : 'Ingredient'}</div>
+                        <div><span className="font-medium">Plain English:</span> {plainText}</div>
+                        <div><span className="font-medium">Origin:</span> {(i.origin?.type || 'unknown').toUpperCase()} {i.origin?.processing ? `• ${i.origin.processing}` : ''}</div>
+                        <div className="pt-2 border-t text-xs text-gray-600">Why it's here: {roleLabel}.</div>
+                      </div>
+                    </IngredientPopover>
+                  </React.Fragment>
+                );
+              })}
             </div>
           </div>
 
