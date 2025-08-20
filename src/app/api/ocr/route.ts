@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 
-export const runtime = 'edge'
+export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.OPENAI_API_KEY
