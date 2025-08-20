@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  gtin        String   @id
+  brand       String?
+  name        String?
+  category    String?
+  imageUrl    String?
+  nutrition   Json?
+  rawText     String?
+  source      Json?
+  updatedAt   DateTime @default(now())
+  ingredients ProductIngredient[]
+}
+
+model Ingredient {
+  id            Int      @id @default(autoincrement())
+  canonicalName String
+  eNumber       String?
+  role          String?
+  originType    String?
+  processing    String?
+  allergenTags  String[]
+  notes         String?
+  products      ProductIngredient[]
+}
+
+model ProductIngredient {
+  gtin          String
+  ingredientId  Int
+  displayName   String?
+  percent       Float?
+  ordinal       Int
+  source        String?
+  lastSeen      DateTime @default(now())
+  product       Product   @relation(fields: [gtin], references: [gtin], onDelete: Cascade)
+  ingredient    Ingredient @relation(fields: [ingredientId], references: [id])
+  @@id([gtin, ingredientId, ordinal])
+}
