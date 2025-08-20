@@ -22,6 +22,7 @@ export default function BarcodeScanner({ onDetected }: Props) {
     setError(null)
     const anyNav = navigator as any
     if (anyNav?.BarcodeDetector) {
+      // Native BarcodeDetector path
       const BarcodeDetector = anyNav.BarcodeDetector
       const detector = new BarcodeDetector({ formats: ['ean_13', 'upc_a', 'upc_e', 'ean_8'] })
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
@@ -31,14 +32,14 @@ export default function BarcodeScanner({ onDetected }: Props) {
         tickNative(detector)
       }
     } else {
-      // ZXing fallback
-      const codeReader = new BrowserMultiFormatReader()
-      zxingRef.current = codeReader
+      // ZXing fallback path
+      const reader = new BrowserMultiFormatReader()
+      zxingRef.current = reader
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         await videoRef.current.play()
-        await codeReader.decodeFromVideoDevice(undefined, videoRef.current, (res, err) => {
+        await reader.decodeFromVideoDevice(undefined, videoRef.current, (res, err) => {
           if (res?.getText()) {
             handleDetect(res.getText())
           }
@@ -72,9 +73,13 @@ export default function BarcodeScanner({ onDetected }: Props) {
 
   function stopStream() {
     try {
-      zxingRef.current?.reset()
+      // Newer ZXing: stop continuous decoding & stop camera streams
+      const reader = zxingRef.current as any
+      reader?.stopContinuousDecode?.()
+      reader?.stopStreams?.()
     } catch {}
-    const tracks = (videoRef.current?.srcObject as MediaStream | null)?.getTracks?.() || []
+    const tracks =
+      (videoRef.current?.srcObject as MediaStream | null)?.getTracks?.() || []
     tracks.forEach((t) => t.stop())
   }
 
@@ -82,7 +87,10 @@ export default function BarcodeScanner({ onDetected }: Props) {
     e.preventDefault()
     setError(null)
     const normalized = normalizeGTIN(manual.trim())
-    if (!normalized) { setError('Please enter a valid 13-digit EAN or 12-digit UPC.'); return }
+    if (!normalized) {
+      setError('Please enter a valid 13-digit EAN or 12-digit UPC.')
+      return
+    }
     onDetected(normalized)
   }
 
@@ -90,15 +98,24 @@ export default function BarcodeScanner({ onDetected }: Props) {
     <div className="card space-y-3">
       <h2 className="text-lg font-semibold">Scan a barcode</h2>
       <div className="flex gap-2 items-center flex-wrap">
-        <button onClick={startScan} className="px-3 py-2 rounded-lg bg-black text-white">Use camera</button>
+        <button onClick={startScan} className="px-3 py-2 rounded-lg bg-black text-white">
+          Use camera
+        </button>
         <form onSubmit={submitManual} className="flex items-center gap-2">
-          <input value={manual} onChange={e=>setManual(e.target.value)} placeholder="Enter GTIN (EAN-13 or UPC-A)" className="px-3 py-2 rounded-lg border" />
+          <input
+            value={manual}
+            onChange={(e) => setManual(e.target.value)}
+            placeholder="Enter GTIN (EAN-13 or UPC-A)"
+            className="px-3 py-2 rounded-lg border"
+          />
           <button className="px-3 py-2 rounded-lg bg-gray-200">Lookup</button>
         </form>
       </div>
       {error && <div className="text-sm text-red-700">{error}</div>}
       <video ref={videoRef} className="w-full rounded-lg" muted playsInline />
-      {!supported && <div className="text-xs text-gray-500">Using ZXing fallback if camera is allowed.</div>}
+      {!supported && (
+        <div className="text-xs text-gray-500">Using ZXing fallback if camera is allowed.</div>
+      )}
     </div>
   )
 }
